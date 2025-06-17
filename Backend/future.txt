@@ -1,0 +1,5 @@
+One thing that can be done later is to ditch langchain and implement this logic manually and see if 
+the performance can be improved. 
+
+1. Index { session_id and user_id } in Sessions collection for fast lookups.
+
