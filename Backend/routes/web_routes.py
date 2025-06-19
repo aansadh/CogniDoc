@@ -5,7 +5,7 @@ from web_extraction.web_scraper import WebScraper
 from fastapi.concurrency import run_in_threadpool
 from datetime import datetime, timezone
 from services.file_processing import process_content_upload
-from utils.logger import log_timing
+from utils.logger import log_duration
 
 router = APIRouter()
 # auth_method: 'clerk'
@@ -13,7 +13,7 @@ router = APIRouter()
 # Suspected blocking operation
 
 @router.post('/')
-@log_timing
+@log_duration
 async def scrape_url(
     url: ScrapeUrlModel,
     session_id: str=Depends(validate_session),

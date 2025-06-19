@@ -51,7 +51,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if not token:
             return False
         session_id, user_id = self._verify_jwt(token)
-        if session_id and await self._owns_session(session_id, user_id, request.app.state.db):
+        if session_id and user_id and await self._owns_session(session_id, user_id, request.app.state.db):
             request.state.auth_method = "token"
             request.state.session_id = session_id
             request.state.user_id = user_id

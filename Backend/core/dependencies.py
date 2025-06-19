@@ -51,3 +51,7 @@ bearer_scheme = HTTPBearer(auto_error=False)
 
 async def get_session_id_header(session_id: Optional[str] = Header(None, alias="Session-ID", description="Your unique session identifier")):
     return session_id
+
+async def get_user_id(request: Request) -> str:
+    if not hasattr(request.state, 'user_id') or request.state.user_id is None:
+        raise HTTPException(status_code=401, detail="User ID is not set in the request state.")

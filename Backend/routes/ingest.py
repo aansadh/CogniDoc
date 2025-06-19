@@ -3,13 +3,13 @@ from core.dependencies import get_vectorstore, get_db, validate_session
 from models.models import TextModel
 from datetime import datetime, timezone
 from services.file_processing import process_file_upload, process_file_deletion, process_content_upload
-from utils.logger import log_timing
+from utils.logger import log_duration
 
 router = APIRouter()
 # auth_method: 'clerk'
 
-@router.post('/uploadText')
-@log_timing
+@router.post('/upload-text')
+@log_duration
 async def uploadText(text: TextModel, session_id: str=Depends(validate_session), db=Depends(get_db), vectorstore=Depends(get_vectorstore)):
     if not text.text.strip():
         raise HTTPException(status_code=400, detail="Text content cannot be empty.")
@@ -26,8 +26,8 @@ async def uploadText(text: TextModel, session_id: str=Depends(validate_session),
     return { "message": "File uploaded and processed successfully.", "file_id": file_id, "session_id": session_id }
     
 
-@router.post('/uploadPdf')
-@log_timing
+@router.post('/upload-pdf')
+@log_duration
 async def upload_pdf(file: UploadFile = File(...), session_id: str=Depends(validate_session), db=Depends(get_db), vectorstore=Depends(get_vectorstore)):
     if file.content_type != 'application/pdf':
         raise HTTPException(status_code=400, detail="Please upload a valid PDF file.")
@@ -49,8 +49,8 @@ async def upload_pdf(file: UploadFile = File(...), session_id: str=Depends(valid
     }
 
 
-@router.delete('/deleteFile/{file_id}')
-@log_timing
+@router.delete('/delete-file/{file_id}')
+@log_duration
 async def deleteFile(file_id: str, session_id: str=Depends(validate_session), db=Depends(get_db), vectorstore=Depends(get_vectorstore)):    
     await process_file_deletion(session_id, file_id, vectorstore, db)
 

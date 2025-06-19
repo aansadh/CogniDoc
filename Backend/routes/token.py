@@ -3,7 +3,7 @@ from jose import jwt
 import time
 from core.dependencies import validate_session
 from dotenv import load_dotenv
-from utils.logger import log_timing
+from utils.logger import log_duration
 from core.config import settings
 
 load_dotenv(override=True)
@@ -15,7 +15,7 @@ JWT_SECRET = settings.jwt_secret
 JWT_ALGORITHM = settings.jwt_algorithm
 
 @router.post("/new-token")
-@log_timing
+@log_duration
 async def create_token(
     request: Request,
     session_id: str=Depends(validate_session)

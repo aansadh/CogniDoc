@@ -1,7 +1,7 @@
 from langchain_chroma import Chroma
-from utils.file_io import create_and_write_file_async
-from utils.vectorstore_utils import add_pdf_to_vectorstore_async, delete_doc_from_vectorstore_async, add_content_to_vectorstore_async
-from utils.db_ops import add_file_metadata_to_db, delete_file_from_db
+from Backend.repositories.file_io import create_and_write_file_async
+from repositories.vectorstore_repo import add_pdf_to_vectorstore_async, delete_doc_from_vectorstore_async, add_content_to_vectorstore_async
+from Backend.repositories.file_repository import add_file_metadata_to_db, delete_file_from_db
 import os 
 from datetime import datetime, timezone
 

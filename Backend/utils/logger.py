@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from functools import wraps
 import asyncio
 
-logger = logging.getLogger("app_startup")
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def timing_block(name: str):
@@ -16,7 +16,7 @@ async def timing_block(name: str):
         logger.info(f"Operation '{name}' executed in {duration:.4f} seconds.")
 
 
-def log_timing(func):
+def log_duration(func):
     @wraps(func) 
     async def async_wrapper(*args, **kwargs):
         start_time = time.monotonic()
