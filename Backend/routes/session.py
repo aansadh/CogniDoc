@@ -1,61 +1,40 @@
-from fastapi import APIRouter, HTTPException, Depends, Request
-from datetime import datetime, timezone
-from models.models import SessionModel
-from core.dependencies import get_db, get_vectorstore, validate_session, get_user_id
-from repositories.vectorstore_repo import delete_doc_from_vectorstore_async
+from fastapi import APIRouter, Depends
+from models.db_models import SessionModel
+from core.dependencies import (
+    validate_session,
+    get_user_id,
+    get_session_services,
+    get_db,
+)
 from utils.logger import log_duration
-from Backend.repositories.file_repository import delete_file_from_db, delete_session_from_db
+from repositories.session_repository import SessionRepository
+from services.session_services import SessionServices
 
 router = APIRouter()
 # auth_method: 'clerk'
 
+
 @router.post("/new-session")
 @log_duration
-async def create_session(request: Request, db=Depends(get_db)):
-    try:
-        user_id = getattr(request.state, 'user_id', None)
-        created_at = datetime.now(timezone.utc)
-        session = SessionModel(user_id=user_id, created_at=created_at)
-
-        session_data = session.model_dump()
-        del session_data["session_id"]
-        response = await db["Sessions"].insert_one(session_data)
-        if not response or not response.acknowledged or not response.inserted_id:
-            raise
-        
-        session.session_id = str(response.inserted_id)
-        return session
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create session. Error: {e}")
+async def create_session(
+    user_id: str = Depends(get_user_id),
+    session_services: SessionServices = Depends(get_session_services),
+):
+    session_id = await session_services.create_session(user_id=user_id)
+    return {"session_id": session_id}
 
 
 @router.delete("/delete-session")
 @log_duration
 async def delete_session(
-    session_id: str=Depends(validate_session), 
-    db=Depends(get_db),
-    vectorstore=Depends(get_vectorstore)
+    session_id: str = Depends(validate_session),
+    session_services: SessionServices = Depends(get_session_services),
 ):
-    ##### Future consideration: Implement transactional delete to make this atomic.
-    try:
-        await delete_doc_from_vectorstore_async(session_id=session_id, vectorstore=vectorstore)
-        await delete_file_from_db(session_id=session_id, db=db)
-        await delete_session_from_db(session_id=session_id, db=db)
+    await session_services.delete_session(session_id=session_id)
+    return {"message": "Session deleted successfully."}
 
-        return {"message": "Session deleted successfully"}
-    except Exception as e:
-        print(f"Error deleting session: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to delete session. Error: {e}")
 
-@router.get('/sessions-list', response_model=[SessionModel])
+@router.get("/get-sessions", response_model=[SessionModel])
 @log_duration
-async def get_sessions(user_id: str=Depends(get_user_id), db=Depends(get_db)):
-    try:
-        sessions = await db["Sessions"].find({"user_id": user_id}).to_list(length=None)
-        if not sessions:
-            raise HTTPException(status_code=404, detail="No sessions found for this user.")
-
-        return sessions
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve sessions. Error: {e}")
-    
+async def get_sessions(user_id: str = Depends(get_user_id), db=Depends(get_db)):
+    return await SessionRepository(db).get_sessions_by_user_id(user_id)

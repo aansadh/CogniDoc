@@ -5,7 +5,13 @@ from bson.objectid import ObjectId
 
 class FileModel(BaseModel):
     """
-    Represents the file model in the database.
+    Represents the metadata of a file stored in the database.
+
+    Attributes:
+        file_id (Optional[str]): Unique identifier for the file, used as the primary key.
+        file_name (str): Name of the uploaded file.
+        session_id (str): Identifier for the session that uploaded the file.
+        created_at (datetime): Timestamp indicating when the file was uploaded.
     """
     file_id: Optional[str] = Field(None, description="Unique file identifier", alias="_id")
     file_name: str = Field(..., description="Name of the uploaded file")
@@ -16,4 +22,41 @@ class FileModel(BaseModel):
         allow_population_by_field_name = True
         json_encoders = {ObjectId: str}
 
+class VectorstoreModel(BaseModel):
+    """
+    Represents the metadata schema for vectorstore entries in the database.
 
+    Attributes:
+        file_id (str): Identifier for the file associated with the vectorstore.
+        file_name (str): Name of the file associated with the vectorstore.
+        session_id (str): Identifier for the session that owns the vectorstore.
+        created_at (datetime): Timestamp indicating when the vectorstore entry was created.
+
+    Note:
+        This model is associated with Chroma vectorstore and is used solely for metadata storage.
+    """
+    file_id: str = Field(..., description="ID of the file associated with the vectorstore")
+    file_name: str = Field(..., description="Name of the file associated with the vectorstore")
+    session_id: str = Field(..., description="ID of the session that owns the vectorstore")
+    created_at: datetime = Field(datetime.now(timezone.utc), description="Timestamp of vectorstore creation")
+
+class SessionModel(BaseModel):
+    """
+    Represents a user session stored in the database.
+
+    Attributes:
+        session_id (Optional[str]): Unique identifier for the session, used as the primary key.
+        user_id (str): Identifier for the user associated with the session.
+        created_at (datetime): Timestamp indicating when the session was created.
+
+    Config:
+        - Allows population of fields by their names.
+        - Encodes ObjectId fields as strings for JSON serialization.
+    """
+    session_id: Optional[str] = Field(None, description="Unique session identifier", alias="_id")
+    user_id: str = Field(..., description="ID of the user associated with the session")
+    created_at: datetime = Field(datetime.now(timezone.utc), description="Timestamp of session creation")
+
+    class Config:
+        allow_population_by_field_name = True
+        json_encoders = {ObjectId: str}

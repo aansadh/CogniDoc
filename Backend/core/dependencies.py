@@ -1,15 +1,15 @@
-from fastapi import Request, FastAPI, HTTPException, Header
+from fastapi import Request, FastAPI, HTTPException, Header, Depends
 from fastapi.security import HTTPBearer
 from typing import Optional
 from langchain_chroma import Chroma
 import os
 from rag.embeddings.embeddings_store import get_embedding_model
-from utils.logger import log_timing, timing_block
+from utils.logger import log_timing
 from pymongo import AsyncMongoClient
 from core.config import settings
 import logging
-
-vectorstore: Chroma = None
+from services.file_services import FileServices
+from services.session_services import SessionServices
 
 logger = logging.getLogger(__name__)
 
@@ -55,3 +55,13 @@ async def get_session_id_header(session_id: Optional[str] = Header(None, alias="
 async def get_user_id(request: Request) -> str:
     if not hasattr(request.state, 'user_id') or request.state.user_id is None:
         raise HTTPException(status_code=401, detail="User ID is not set in the request state.")
+
+async def get_file_services(request: Request, db=Depends(get_db), vectorstore: Chroma=Depends(get_vectorstore)) -> FileServices:
+    if not hasattr(request.state, 'file_services') or request.state.file_services is None:
+        request.state.file_services = FileServices(vectorstore=vectorstore, db=db)
+    return request.state.file_services
+
+async def get_session_services(request: Request, db=Depends(get_db), vectorstore: Chroma=Depends(get_vectorstore)) -> SessionServices:  
+    if not hasattr(request.state, 'session_services') or request.state.session_services is None:
+        request.state.session_services = SessionServices(vectorstore=vectorstore, db=db)
+    return request.state.session_services

@@ -15,11 +15,7 @@ async def ask_query_endpoint(
     session_id: str=Depends(validate_session),
     vectorstore=Depends(get_vectorstore)
 ):  
-    try:
-        filter = {"session_id": session_id}
-        response = await run_in_threadpool(process_query, query.query, filter, vectorstore)
+    filter = {"session_id": session_id}
+    response = await run_in_threadpool(process_query, query.query, filter, vectorstore)
 
-        return response
-    
-    except ContextNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    return response

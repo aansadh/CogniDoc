@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from core.dependencies import get_db, validate_session
+from repositories.file_repository import FileRepository
 
 router = APIRouter()
 
@@ -8,10 +9,8 @@ async def get_all_files(session_id: str=Depends(validate_session), db=Depends(ge
     """
     Retrieve all files associated with the current session.
     """
-    try:
-        files = await db["Files"].find({"session_id": session_id}).to_list(length=None)
-        if not files:
-            raise HTTPException(status_code=404, detail="No files found for this session.")
-        return files
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve files. Error: {str(e)}")
+    files = await FileRepository(db).get_files_by_session(session_id)
+    return {
+        "message": "Files retrieved successfully.",
+        "payload": files
+    }

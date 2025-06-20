@@ -1,17 +1,16 @@
-from fastapi import FastAPI, Request, HTTPException, Header
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI
 from dotenv import load_dotenv
 import os
 from fastapi.concurrency import run_in_threadpool
-from routes import ingest, query, web_routes, session, token
+from routes import ingest, query, web_routes, session, token, file
 from core.dependencies import init_vectorstore_sync, init_mongodb_async, bearer_scheme, get_session_id_header
 from core.auth import clerk_only
 from contextlib import asynccontextmanager
 from middlewares.auth_middleware import AuthMiddleware
 import logging
 from fastapi import Depends
-from utils.logger import log_timing
 from core.config import settings
+from core.exception_handlers import EXCEPTION_HANDLERS
 
 load_dotenv(override=True)
 logging.basicConfig(level=settings.log_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -35,12 +34,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan, dependencies=[Depends(bearer_scheme), Depends(get_session_id_header)])
 
-@app.exception_handler(Exception)
-async def handler(request: Request, exc: Exception):
-    if isinstance(exc, HTTPException):
-        raise exc
-    logging.error(f"Unhandled exception: {exc}", exc_info=True)
-    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+for exc_type, handler_func in EXCEPTION_HANDLERS:
+    app.add_exception_handler(exc_type, handler_func)
 
 app.add_middleware(AuthMiddleware)
 
@@ -49,6 +44,7 @@ app.include_router(ingest.router, prefix="/ingest", dependencies=[Depends(clerk_
 app.include_router(query.router, prefix="/query")
 app.include_router(web_routes.router, prefix="/webscrape", dependencies=[Depends(clerk_only)])
 app.include_router(token.router, prefix='/token', dependencies=[Depends(clerk_only)])
+app.include_router(file.router, prefix='/file', dependencies=[Depends(clerk_only)])
 
 @app.get("/")
 async def root():
