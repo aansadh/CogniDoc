@@ -1,3 +1,7 @@
+"""
+Routes for handling token-related operations in the Smart PDF QA API application.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from jose import jwt
 import time
@@ -19,7 +23,20 @@ JWT_ALGORITHM = settings.jwt_algorithm
 async def create_token(
     request: Request,
     session_id: str=Depends(validate_session)
-):  
+):
+    """
+    Creates a new token for the session.
+
+    Args:
+        request (Request): The incoming HTTP request.
+        session_id (str): The session ID.
+
+    Returns:
+        dict: A response containing the token and its expiration time.
+
+    Raises:
+        HTTPException: If token creation fails.
+    """
     try:
         payload = {
             "session_id": session_id,

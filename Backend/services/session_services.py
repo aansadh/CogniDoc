@@ -1,3 +1,8 @@
+"""
+This module provides services for managing user sessions, including creation and deletion.
+It interacts with the database, vectorstore, and file repository to ensure session data is handled efficiently.
+"""
+
 from langchain_chroma import Chroma
 from models.db_models import SessionModel
 from repositories.session_repository import SessionRepository
@@ -63,4 +68,3 @@ class SessionServices:
             await self.session_repository.delete_session(session_id)
         except Exception as e:
             raise SessionServiceError(f"Failed to delete session: {str(e)}")
-        

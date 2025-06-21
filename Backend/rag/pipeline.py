@@ -48,7 +48,7 @@ def get_context(vectorstore: Chroma, query: str, filter=None):
 
 
 def ask_query(context: str, query: str, url: str = None):
-    API_URL = url or os.getenv("API_URL")
+    API_URL = url or os.getenv("HUGGINGFACE_INFERENCE_API_URL")
     if not API_URL:
         raise EnvironmentError("API URL is missing. Set the API_URL environment variable.")
     API_KEY = os.getenv("HUGGINGFACE_API_KEY")

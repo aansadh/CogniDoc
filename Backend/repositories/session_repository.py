@@ -1,4 +1,4 @@
-from exceptions import NotFoundError, DatabaseOperationError
+from exceptions import ResourceNotFoundError, DatabaseOperationError
 from bson.objectid import ObjectId
 from models.db_models import SessionModel
 
@@ -39,7 +39,7 @@ class SessionRepository:
 
             return str(result.inserted_id)
         except Exception as e:
-            raise DatabaseOperationError(status_code=500, detail=f"Error inserting session: {str(e)}")
+            raise DatabaseOperationError(f"Error inserting session: {str(e)}")
 
     async def delete_session(self, session_id: str):
         """
@@ -53,12 +53,11 @@ class SessionRepository:
             DatabaseOperationError: If the operation fails.
         """
         try:
-            result = await self.collectioon.delete_one({"_id": ObjectId(session_id)})
+            result = await self.collection.delete_one({"_id": ObjectId(session_id)})
             if result.deleted_count == 0:
-                raise NotFoundError(status_code=404, detail="Session not found")
-            
+                raise ResourceNotFoundError(resource_type='Session', resource_id=session_id)
         except Exception as e:
-            raise DatabaseOperationError(status_code=500, detail=f"Error deleting session: {str(e)}")
+            raise DatabaseOperationError(f"Error deleting session: {str(e)}")
         
     async def get_sessions_by_user_id(self, user_id: str) -> list[SessionModel]:
         """
@@ -76,8 +75,13 @@ class SessionRepository:
         try:
             list_sessions = await self.collection.find({"user_id": user_id}).to_list(length=None)
 
-            sessions = [session.model_validate(session) for session in list_sessions]
+            sessions = []
+            for session in list_sessions:
+                if '_id' in session and isinstance(session['_id'], ObjectId):
+                    session["_id"] = str(session["_id"])
+
+                sessions.append(SessionModel.model_validate(session, by_alias=True))
 
             return sessions
         except Exception as e:
-            raise DatabaseOperationError(status_code=500, detail=f"Error retrieving sessions: {str(e)}")
+            raise DatabaseOperationError(f"Error retrieving sessions: {str(e)}")

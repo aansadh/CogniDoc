@@ -28,16 +28,26 @@ class RepositoryError(BaseError):
     """
     pass
 
+class ResourceNotFoundError(RepositoryError):
+    """
+    Custom exception for resource not found errors.
+    Raised by repositories when a resource is not found.
+    """
+    def __init__(self, resource_type: str="Resource", resource_id: str=None):
+        """
+        Initializes the ResourceNotFoundError.
+
+        Args:
+            resource_type (str): The type of the resource that was not found.
+            resource_id (str, optional): The ID of the resource that was not found.
+        """
+        self.resource_type = resource_type
+        self.resource_id = resource_id
+        super().__init__(f"{resource_type} with ID '{resource_id}' not found." if resource_id else f"{resource_type} not found.")
+
 class FileOperationError(RepositoryError):
     """
     Custom exception for file operation errors.
-    """
-    pass
-
-class FileNotFoundError(FileOperationError):
-    """
-    Custom exception for file not found errors.
-    Raised by FileRepository.
     """
     pass
 

@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field
 from datetime import datetime, timezone
-from typing import Optional
-from bson.objectid import ObjectId
+from typing import Optional, ClassVar
 
 class FileModel(BaseModel):
     """
@@ -13,14 +12,12 @@ class FileModel(BaseModel):
         session_id (str): Identifier for the session that uploaded the file.
         created_at (datetime): Timestamp indicating when the file was uploaded.
     """
-    file_id: Optional[str] = Field(None, description="Unique file identifier", alias="_id")
+    file_id: Optional[str] = Field(default=None, description="Unique file identifier", alias="_id")
     file_name: str = Field(..., description="Name of the uploaded file")
     session_id: str = Field(..., description="ID of the session that uploaded the file")
     created_at: datetime = Field(datetime.now(timezone.utc), description="Timestamp of file upload")
 
-    class Config:
-        allow_population_by_field_name = True
-        json_encoders = {ObjectId: str}
+    modelConfig: ClassVar[dict] = {"validate_by_name": True}
 
 class VectorstoreModel(BaseModel):
     """
@@ -53,10 +50,9 @@ class SessionModel(BaseModel):
         - Allows population of fields by their names.
         - Encodes ObjectId fields as strings for JSON serialization.
     """
-    session_id: Optional[str] = Field(None, description="Unique session identifier", alias="_id")
+    session_id: Optional[str] = Field(default=None, description="Unique session identifier", alias="_id")
     user_id: str = Field(..., description="ID of the user associated with the session")
     created_at: datetime = Field(datetime.now(timezone.utc), description="Timestamp of session creation")
 
-    class Config:
-        allow_population_by_field_name = True
-        json_encoders = {ObjectId: str}
+    modelConfig: ClassVar[dict] = {"validate_by_name": True}
+    

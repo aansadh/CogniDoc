@@ -1,7 +1,7 @@
 from models.db_models import FileModel
 from bson.objectid import ObjectId
 from typing import Optional
-from exceptions import DatabaseOperationError, FileNotFoundError
+from exceptions import DatabaseOperationError, ResourceNotFoundError
 
 class FileRepository:
     """
@@ -56,7 +56,7 @@ class FileRepository:
             int: The number of deleted records.
 
         Raises:
-            FileNotFoundError: If no matching file is found.
+            ResourceNotFoundError: If no matching file is found.
             DatabaseOperationError: If the operation fails.
         """
         try:
@@ -67,16 +67,12 @@ class FileRepository:
             else:
                 result = await self.collection.delete_many(query)
 
-            if result.deleted_count == 0:
-                raise FileNotFoundError("File not found in the database.")
-            
             return result.deleted_count
-        except FileNotFoundError:
-            raise 
+        
         except Exception as e:
             raise DatabaseOperationError(f"An error occurred while deleting file metadata: {str(e)}")
 
-    async def get_file_by_session_id(self, session_id: str):
+    async def get_files_by_session_id(self, session_id: str) -> list[FileModel]:
         """
         Retrieves file metadata from the database by session ID.
 
@@ -87,16 +83,20 @@ class FileRepository:
             list: A list of file metadata records.
 
         Raises:
-            FileNotFoundError: If no files are found for the given session ID.
+            ResourceNotFoundError: If no files are found for the given session ID.
             DatabaseOperationError: If the operation fails.
         """
         try:
-            files = await self.collection.find({"session_id": session_id}).to_list(length=None)
-            if not files or len(files) == 0:
-                raise FileNotFoundError("No files found for the given session ID.")
+            files_list = await self.collection.find({"session_id": session_id}).to_list(length=None)
+            
+            files = []
+            for file in files_list:
+                file["file_id"] = str(file["_id"])
+                del file['_id']
+                files.append(FileModel.model_validate(file, by_alias=True))
+
             return files
-        except FileNotFoundError:
-            raise
+        
         except Exception as e:
             raise DatabaseOperationError(f"An error occurred while retrieving file metadata: {str(e)}")
 

@@ -1,3 +1,9 @@
+"""
+Routes for handling web scraping operations in the Smart PDF QA API application.
+
+Suspected to be a blocking operation due too use of Request in WebScraper.
+"""
+
 from fastapi import APIRouter, HTTPException, Depends
 from models.models import ScrapeUrlModel
 from core.dependencies import validate_session, get_file_services
@@ -11,8 +17,6 @@ router = APIRouter()
 
 logger = logging.getLogger(__name__)
 
-# Suspected blocking operation
-
 @router.post('/')
 @log_duration
 async def scrape_url(
@@ -20,6 +24,20 @@ async def scrape_url(
     session_id: str=Depends(validate_session),
     file_services: FileServices = Depends(get_file_services)
 ):
+    """
+    Scrapes content from a URL and processes it (uploads it).
+
+    Args:
+        url (ScrapeUrlModel): The URL to scrape.
+        session_id (str): The session ID.
+        file_services (FileServices): The file services instance.
+
+    Returns:
+        dict: A response containing the scraped content and metadata.
+
+    Raises:
+        HTTPException: If the URL is empty or no content is found.
+    """
     if not url.url.strip():
         raise HTTPException(status_code=400, detail="URL cannot be empty.")
 

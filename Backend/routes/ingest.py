@@ -1,3 +1,7 @@
+"""
+Routes for handling file ingestion in the Smart PDF QA API application.
+"""
+
 from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
 from core.dependencies import (
     validate_session,
@@ -18,6 +22,20 @@ async def uploadText(
     session_id: str = Depends(validate_session),
     file_services: FileServices = Depends(get_file_services),
 ):
+    """
+    Uploads text content and processes it.
+
+    Args:
+        text (TextModel): The text content to upload.
+        session_id (str): The session ID.
+        file_services (FileServices): The file services instance.
+
+    Returns:
+        dict: A response containing the file ID and session ID.
+
+    Raises:
+        HTTPException: If the text content is empty.
+    """
     if not text.text.strip():
         raise HTTPException(status_code=400, detail="Text content cannot be empty.")
 
@@ -41,6 +59,20 @@ async def upload_pdf(
     session_id: str = Depends(validate_session),
     file_services: FileServices = Depends(get_file_services),
 ):
+    """
+    Uploads a PDF file and processes it.
+
+    Args:
+        file (UploadFile): The PDF file to upload.
+        session_id (str): The session ID.
+        file_services (FileServices): The file services instance.
+
+    Returns:
+        dict: A response containing the file ID and session ID.
+
+    Raises:
+        HTTPException: If the file is not a valid PDF.
+    """
     if file.content_type != "application/pdf":
         raise HTTPException(status_code=400, detail="Please upload a valid PDF file.")
 
@@ -65,6 +97,17 @@ async def deleteFile(
     session_id: str = Depends(validate_session),
     file_services: FileServices = Depends(get_file_services),
 ):
+    """
+    Deletes a file by its ID.
+
+    Args:
+        file_id (str): The ID of the file to delete.
+        session_id (str): The session ID.
+        file_services (FileServices): The file services instance.
+
+    Returns:
+        dict: A response confirming the deletion.
+    """
     await file_services.process_file_deletion(session_id, file_id)
 
     return {"message": f"File ID:'{file_id}' deleted successfully."}

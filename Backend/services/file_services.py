@@ -1,3 +1,7 @@
+"""
+Service layer for handling file-related operations in the Smart PDF QA API application.
+"""
+
 from langchain_chroma import Chroma
 from repositories.file_repository import FileRepository
 from rag.vectorstore_repository import VectorstoreRepository
@@ -37,7 +41,7 @@ class FileServices:
 
         Args:
             session_id (str): The session identifier.
-            content: The file content.
+            content (bytes): The file content.
             file_name (str): The name of the file.
 
         Returns:
@@ -69,7 +73,7 @@ class FileServices:
             await self._rollback_add_file_metadata(session_id, file_id)
             raise FileServiceError(f"Failed to process file upload: {file_name}:  {e}")
         finally:
-            self._cleanup_temp_file(file_path)
+            self._cleanup_file(file_path)
 
     async def process_content_upload(
         self,
@@ -124,6 +128,9 @@ class FileServices:
         Args:
             session_id (str): The session identifier.
             file_id (str, optional): The file ID to delete.
+
+        Raises:
+            FileServiceError: If the file deletion fails.
         """
         try:
             filter_criteria = {"file_id": file_id, "session_id": session_id}
@@ -139,6 +146,13 @@ class FileServices:
     ### helper internal methods --------------------------------------------------
 
     async def _rollback_add_file_metadata(self, session_id: str, file_id: str):
+        """
+        Rolls back the addition of file metadata in case of an error.
+
+        Args:
+            session_id (str): The session identifier.
+            file_id (str): The file ID to roll back.
+        """
         if file_id:
             try:
                 await self.file_repository.delete_file_metadata(session_id, file_id)
@@ -147,9 +161,16 @@ class FileServices:
                     f"Failed to roll back file metadata for session {session_id} and file {file_id}: {e}",
                     exc_info=True,
                 )
-
+    
+    @staticmethod
     def _cleanup_file(file_path: str):
+        """
+        Cleans up temporary files.
+
+        Args:
+            file_path (str): The path of the file to clean up.
+        """
         try:
             FileStorageRepository.delete_file(file_path)
         except Exception as e:
-            logger.error(f"Failed to clean up temporary file.", exc_info=True)
+            logger.error(f"Failed to clean up temporary file: {e}", exc_info=True)
