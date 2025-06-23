@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     """
     app_name: str = "Smart PDF QA API"
     api_version: str = "0.1.0"
-    log_level: str = "INFO"
+    log_level: str = "INFO"  # Options: INFO, DEBUG, WARNING, ERROR, CRITICAL
     uploads_folder: str = "data" 
 
     openai_api_key: Optional[str] = None 

@@ -6,10 +6,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from core.dependencies import get_db, validate_session
 from repositories.file_repository import FileRepository
 from models.db_models import FileModel
+from typing import List
 
 router = APIRouter()
 
-@router.get('/', response_model=list[FileModel])
+@router.get('/', response_model=List[dict])
 async def get_all_files(session_id: str=Depends(validate_session), db=Depends(get_db)):
     """
     Retrieves all files associated with the current session.

@@ -7,7 +7,7 @@ from repositories.file_repository import FileRepository
 from rag.vectorstore_repository import VectorstoreRepository
 from repositories.file_storage_repository import FileStorageRepository
 from models.db_models import FileModel, VectorstoreModel
-from exceptions import FileServiceError
+from exceptions import FileServiceError, ResourceNotFoundError
 import logging
 
 logger = logging.getLogger(__name__)
@@ -133,11 +133,13 @@ class FileServices:
             FileServiceError: If the file deletion fails.
         """
         try:
-            filter_criteria = {"file_id": file_id, "session_id": session_id}
+            filter_criteria = {"$and": [{"file_id": file_id}, {"session_id": session_id}]}
             await self.vectorstore_repository.delete_doc_async(
                 filter_criteria=filter_criteria
             )
             await self.file_repository.delete_file_metadata(session_id, file_id)
+        except ResourceNotFoundError as e:
+            raise
         except Exception as e:
             raise FileServiceError(
                 f"Failed to delete file: {file_id} for session {session_id}: {e}"

@@ -1,7 +1,10 @@
 from models.db_models import FileModel
 from bson.objectid import ObjectId
-from typing import Optional
+from typing import Optional, List
 from exceptions import DatabaseOperationError, ResourceNotFoundError
+import logging
+
+logger = logging.getLogger(__name__)
 
 class FileRepository:
     """
@@ -17,6 +20,7 @@ class FileRepository:
         """
         self.db = db
         self.collection = self.db["Files"]
+
 
     async def add_file_metadata(self, file_doc: FileModel) -> str:
         """
@@ -67,12 +71,18 @@ class FileRepository:
             else:
                 result = await self.collection.delete_many(query)
 
+            if result.deleted_count == 0:
+                raise ResourceNotFoundError(resource_type='File', resource_id=file_id or session_id)
+
             return result.deleted_count
-        
+        except ResourceNotFoundError:
+            logger.warning(f"No files found for session_id: {session_id} and file_id: {file_id}")
+            raise
         except Exception as e:
             raise DatabaseOperationError(f"An error occurred while deleting file metadata: {str(e)}")
 
-    async def get_files_by_session_id(self, session_id: str) -> list[FileModel]:
+
+    async def get_files_by_session_id(self, session_id: str) -> List[dict]:
         """
         Retrieves file metadata from the database by session ID.
 
@@ -87,16 +97,14 @@ class FileRepository:
             DatabaseOperationError: If the operation fails.
         """
         try:
-            files_list = await self.collection.find({"session_id": session_id}).to_list(length=None)
-            
-            files = []
-            for file in files_list:
-                file["file_id"] = str(file["_id"])
-                del file['_id']
-                files.append(FileModel.model_validate(file, by_alias=True))
+            files = await self.collection.find({"session_id": session_id}).to_list(length=None)
+
+            for file in files:
+                if '_id' in file and isinstance(file['_id'], ObjectId):
+                    file["file_id"] = str(file["_id"])
+                    del file["_id"]
 
             return files
         
         except Exception as e:
             raise DatabaseOperationError(f"An error occurred while retrieving file metadata: {str(e)}")
-

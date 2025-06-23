@@ -15,7 +15,7 @@ class FileModel(BaseModel):
     file_id: Optional[str] = Field(default=None, description="Unique file identifier", alias="_id")
     file_name: str = Field(..., description="Name of the uploaded file")
     session_id: str = Field(..., description="ID of the session that uploaded the file")
-    created_at: datetime = Field(datetime.now(timezone.utc), description="Timestamp of file upload")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Timestamp of file upload")
 
     modelConfig: ClassVar[dict] = {"validate_by_name": True}
 
@@ -35,7 +35,7 @@ class VectorstoreModel(BaseModel):
     file_id: str = Field(..., description="ID of the file associated with the vectorstore")
     file_name: str = Field(..., description="Name of the file associated with the vectorstore")
     session_id: str = Field(..., description="ID of the session that owns the vectorstore")
-    created_at: datetime = Field(datetime.now(timezone.utc), description="Timestamp of vectorstore creation")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Timestamp of vectorstore creation")
 
 class SessionModel(BaseModel):
     """
@@ -52,7 +52,7 @@ class SessionModel(BaseModel):
     """
     session_id: Optional[str] = Field(default=None, description="Unique session identifier", alias="_id")
     user_id: str = Field(..., description="ID of the user associated with the session")
-    created_at: datetime = Field(datetime.now(timezone.utc), description="Timestamp of session creation")
+    created_at: datetime = Field(default_factory= lambda: datetime.now(timezone.utc), description="Timestamp of session creation")
 
     modelConfig: ClassVar[dict] = {"validate_by_name": True}
     
