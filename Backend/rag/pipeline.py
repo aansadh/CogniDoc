@@ -24,7 +24,7 @@ def split_docs(documents: List[Iterable], metadata: dict = None):
 
     return chunks
 
-def get_relevant_chunks(vectorstore: Chroma, query: str, filter=None, relevance_threshold=0.3, k=3):
+def get_relevant_chunks(vectorstore: Chroma, query: str, filter=None, relevance_threshold=0.3, k=5):
     relevant_chunks = vectorstore.similarity_search_with_relevance_scores(query, k=k, filter=filter)
     if(len(relevant_chunks) == 0 or relevant_chunks[0][1] < relevance_threshold):
         raise ContextNotFoundError("No relevant documents found for the query!")

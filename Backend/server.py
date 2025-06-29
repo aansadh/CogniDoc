@@ -76,34 +76,11 @@ Adds authentication middleware to the application.
 """
 
 app.include_router(session.router, prefix='/session', dependencies=[Depends(clerk_only)])
-"""
-Includes session-related routes with clerk-only access.
-"""
-
 app.include_router(ingest.router, prefix="/ingest", dependencies=[Depends(clerk_only)])
-"""
-Includes ingest-related routes with clerk-only access.
-"""
-
 app.include_router(query.router, prefix="/query")
-"""
-Includes query-related routes.
-"""
-
 app.include_router(web_routes.router, prefix="/webscrape", dependencies=[Depends(clerk_only)])
-"""
-Includes web scraping routes with clerk-only access.
-"""
-
 app.include_router(token.router, prefix='/token', dependencies=[Depends(clerk_only)])
-"""
-Includes token-related routes with clerk-only access.
-"""
-
 app.include_router(file.router, prefix='/file', dependencies=[Depends(clerk_only)])
-"""
-Includes file-related routes with clerk-only access.
-"""
 
 @app.get("/")
 async def root():

@@ -106,11 +106,7 @@ class WebScraper:
         return self.scrape_browserContent()
 
 if __name__ == "__main__":
-    url = 'https://battle-through-the-heavens.fandom.com/wiki/Cai_Lin'
-    # url = 'https://www.nytimes.com/'
-    # url = 'https://www.nytimes.com/2025/05/29/business/economy/trump-tariffs-ruling-businesses.html'
-    # url = 'https://timesofindia.indiatimes.com/'
-    # url = 'https://timesofindia.indiatimes.com/india/our-right-of-self-defence-shashi-tharoor-disappointed-over-colombias-reaction-to-operation-sindoor/articleshow/121501848.cms'
+    url = ''
     scraper = WebScraper(url)
     content = scraper.scrape()
     print(f"{content[:1000]}...")
