@@ -1,12 +1,22 @@
+"""
+Utility module for logging and measuring execution duration in the Smart PDF QA API application.
+"""
+
 import time, logging
 from contextlib import asynccontextmanager
 from functools import wraps
 import asyncio
 
-logger = logging.getLogger("app_startup")
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def timing_block(name: str):
+    """
+    Measures the execution time of a block of code.
+
+    Args:
+        name (str): The name of the operation being measured.
+    """
     start_time = time.monotonic()
     try:
         yield 
@@ -16,7 +26,16 @@ async def timing_block(name: str):
         logger.info(f"Operation '{name}' executed in {duration:.4f} seconds.")
 
 
-def log_timing(func):
+def log_duration(func):
+    """
+    Decorator for logging the execution duration of a function.
+
+    Args:
+        func: The function to measure.
+
+    Returns:
+        Function: The wrapped function with duration logging.
+    """
     @wraps(func) 
     async def async_wrapper(*args, **kwargs):
         start_time = time.monotonic()

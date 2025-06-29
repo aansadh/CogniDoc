@@ -1,3 +1,11 @@
+fastapi[standard]
+pydantic
+pydantic-settings
+python-dotenv
+uvicorn
+# langchain dependencies
+sentence-transformers
+aiofiles
 langchain
 langchain-core
 langchain-community
@@ -5,15 +13,9 @@ openai
 chromadb
 tiktoken
 pymupdf
-python-dotenv
-fastapi[standard]
-uvicorn
 langchain-huggingface
 langchain-openai
 langchain-chroma
-pydantic
-pydantic-settings
-aiofiles
 # web-scraping dependencies
 requests
 beautifulsoup4
@@ -24,6 +26,9 @@ clerk-backend-api
 clerk-sdk
 python-jose[cryptography]
 httpx
+# deps for handling db operations
+pymongo
+
 
 # virtual environment: python -m venv venv
 # activate venv: .\venv\Scripts\Activate.ps1

@@ -1,9 +1,13 @@
+"""
+Routes for handling token-related operations in the Smart PDF QA API application.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from jose import jwt
 import time
 from core.dependencies import validate_session
 from dotenv import load_dotenv
-from utils.logger import log_timing
+from utils.logger import log_duration
 from core.config import settings
 
 load_dotenv(override=True)
@@ -15,11 +19,24 @@ JWT_SECRET = settings.jwt_secret
 JWT_ALGORITHM = settings.jwt_algorithm
 
 @router.post("/new-token")
-@log_timing
+@log_duration
 async def create_token(
     request: Request,
     session_id: str=Depends(validate_session)
-):  
+):
+    """
+    Creates a new token for the session.
+
+    Args:
+        request (Request): The incoming HTTP request.
+        session_id (str): The session ID.
+
+    Returns:
+        dict: A response containing the token and its expiration time.
+
+    Raises:
+        HTTPException: If token creation fails.
+    """
     try:
         payload = {
             "session_id": session_id,
