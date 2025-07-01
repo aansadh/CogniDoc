@@ -16,6 +16,7 @@ import logging
 from fastapi import Depends
 from core.config import settings
 from core.exception_handlers import EXCEPTION_HANDLERS
+from fastapi.middleware.cors import CORSMiddleware # <--- Add this import
 
 load_dotenv(override=True)
 logging.basicConfig(level=settings.log_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -60,6 +61,31 @@ app = FastAPI(
 Initializes the FastAPI application instance with lifespan management and global dependencies.
 """
 
+# Add CORS middleware here, right after initializing the FastAPI app
+# --- START CORS CONFIGURATION ---
+origins = [
+    "http://localhost",
+    "http://localhost:3000",  # Your frontend's development server
+    "http://localhost:5173",  # Common for Vite/React dev server
+    "http://127.0.0.1:8000",  # If your backend runs on this address
+    "http://127.0.0.1:5173",  # Another common Vite/React dev server address
+    # Add the URL of your deployed frontend here!
+    "https://preview--query-smart-docs-ui.lovable.app", # <--- IMPORTANT: Replace with your actual deployed frontend URL
+    # If you have multiple deployed environments (e.g., staging, production):
+    # "https://staging.your-app.com",
+    # "https://production.your-app.com",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all standard methods (GET, POST, PUT, DELETE, OPTIONS)
+    allow_headers=["*"],  # Allows all headers from the client
+)
+# --- END CORS CONFIGURATION ---
+
+
 for exc_type, handler_func in EXCEPTION_HANDLERS:
     """
     Registers exception handlers for the application.
@@ -70,7 +96,7 @@ for exc_type, handler_func in EXCEPTION_HANDLERS:
     """
     app.add_exception_handler(exc_type, handler_func)
 
-app.add_middleware(AuthMiddleware)
+app.add_middleware(AuthMiddleware) # Keep your existing middleware
 """
 Adds authentication middleware to the application.
 """

@@ -9,6 +9,7 @@ from core.dependencies import validate_session
 from dotenv import load_dotenv
 from utils.logger import log_duration
 from core.config import settings
+import logging
 
 load_dotenv(override=True)
 
@@ -18,12 +19,15 @@ router = APIRouter()
 JWT_SECRET = settings.jwt_secret
 JWT_ALGORITHM = settings.jwt_algorithm
 
+logger = logging.getLogger(__name__)
+
 @router.post("/new-token")
 @log_duration
 async def create_token(
     request: Request,
     session_id: str=Depends(validate_session)
 ):
+    logger.debug(f"Creating new token: session_id={session_id}, user_id={request.state.user_id}")
     """
     Creates a new token for the session.
 
@@ -47,7 +51,9 @@ async def create_token(
 
         token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
+        logger.info(f"Token created successfully: session_id={session_id}")
         return {"token": token, "message": f"Create new token in {3600 * 24 * 60} seconds."}
     
     except Exception as e:
+        logger.error(f"Failed to create token: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error creating token: {str(e)}")

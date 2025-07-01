@@ -9,6 +9,9 @@ from repositories.session_repository import SessionRepository
 from exceptions import SessionServiceError
 from rag.vectorstore_repository import VectorstoreRepository
 from repositories.file_repository import FileRepository
+import logging
+
+logger = logging.getLogger(__name__)
 
 class SessionServices:
     """
@@ -29,12 +32,13 @@ class SessionServices:
         self.vectorstore_repository = VectorstoreRepository(self.vectorstore)
         self.file_repository = FileRepository(self.db)
 
-    async def create_session(self, user_id: str) -> str:
+    async def create_session(self, user_id: str, session_name: str) -> str:
         """
         Creates a new session for the user.
 
         Args:
             user_id (str): The ID of the user.
+            session_name (str): The name of the session to be created.
 
         Returns:
             str: The ID of the created session.
@@ -42,11 +46,14 @@ class SessionServices:
         Raises:
             SessionServiceError: If the session creation fails.
         """
+        logger.debug(f"Creating session: user_id={user_id}, session_name={session_name}")
         try:
-            session_doc = SessionModel(user_id=user_id)
+            session_doc = SessionModel(user_id=user_id, session_name=session_name)
             session_id = await self.session_repository.add_session(session_doc)
+            logger.info(f"Session created successfully: session_id={session_id}")
             return session_id
         except Exception as e:
+            logger.error(f"Failed to create session: {e}", exc_info=True)
             raise SessionServiceError(f"Failed to create session: {str(e)}")
         
     async def delete_session(self, session_id: str):
@@ -62,9 +69,41 @@ class SessionServices:
         Note:
             Future consideration: Implement transactional delete to make this operation atomic.
         """
+        logger.debug(f"Deleting session: session_id={session_id}")
         try:
             await self.vectorstore_repository.delete_doc_async({"session_id": session_id})
-            await self.file_repository.delete_file_metadata(session_id)
-            await self.session_repository.delete_session(session_id)
+            logger.info(f"Vectorstore entries deleted for session_id={session_id}")
+
+            await self.file_repository.delete_file_metadata(session_id=session_id)
+            logger.info(f"File metadata deleted for session_id={session_id}")
+
+            await self.session_repository.delete_session(session_id=session_id)
+            logger.info(f"Session deleted successfully: session_id={session_id}")
         except Exception as e:
+            logger.error(f"Failed to delete session: {e}", exc_info=True)
             raise SessionServiceError(f"Failed to delete session: {str(e)}")
+        
+    async def get_session(self, session_id: str) -> SessionModel:
+        """
+        Retrieves a session by its ID.
+
+        Args:
+            session_id (str): The ID of the session to retrieve.
+
+        Returns:
+            SessionModel: The session document.
+
+        Raises:
+            SessionServiceError: If the session retrieval fails.
+        """
+        logger.debug(f"Retrieving session: session_id={session_id}")
+        try:
+            session = await self.session_repository.get_session_by_id(session_id)
+            if not session:
+                logger.warning(f"Session not found: session_id={session_id}")
+                raise SessionServiceError("Session not found")
+            logger.info(f"Session retrieved successfully: session_id={session_id}")
+            return session
+        except Exception as e:
+            logger.error(f"Failed to retrieve session: {e}", exc_info=True)
+            raise SessionServiceError(f"Failed to retrieve session: {str(e)}")

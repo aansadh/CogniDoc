@@ -9,8 +9,10 @@ from core.dependencies import get_vectorstore, validate_session
 from utils.logger import log_duration
 from fastapi.concurrency import run_in_threadpool
 from rag.exceptions import ContextNotFoundError
+import logging
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 @router.post('/askQuery')
 @log_duration
@@ -19,18 +21,15 @@ async def ask_query_endpoint(
     session_id: str=Depends(validate_session),
     vectorstore=Depends(get_vectorstore)
 ):  
-    """
-    Processes a user query and retrieves the response.
-
-    Args:
-        query (QueryModel): The user query.
-        session_id (str): The session ID.
-        vectorstore: The vectorstore instance.
-
-    Returns:
-        dict: The query response.
-    """
-    filter = {"session_id": session_id}
-    response = await run_in_threadpool(process_query, query.query, filter=filter, vectorstore=vectorstore)
-
-    return response
+    logger.debug(f"Processing query: session_id={session_id}, query={query.query}")
+    try:
+        filter = {"session_id": session_id}
+        response = await run_in_threadpool(process_query, query.query, filter=filter, vectorstore=vectorstore)
+        logger.info(f"Query processed successfully: session_id={session_id}")
+        return response
+    except ContextNotFoundError as e:
+        logger.warning(f"Context not found for query: {e}")
+        raise HTTPException(status_code=404, detail="Context not found.")
+    except Exception as e:
+        logger.error(f"Failed to process query: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to process query.")

@@ -24,41 +24,34 @@ async def scrape_url(
     session_id: str=Depends(validate_session),
     file_services: FileServices = Depends(get_file_services)
 ):
-    """
-    Scrapes content from a URL and processes it (uploads it).
-
-    Args:
-        url (ScrapeUrlModel): The URL to scrape.
-        session_id (str): The session ID.
-        file_services (FileServices): The file services instance.
-
-    Returns:
-        dict: A response containing the scraped content and metadata.
-
-    Raises:
-        HTTPException: If the URL is empty or no content is found.
-    """
+    logger.debug(f"Scraping URL: session_id={session_id}, url={url.url}")
     if not url.url.strip():
+        logger.warning("URL is empty. Raising HTTPException.")
         raise HTTPException(status_code=400, detail="URL cannot be empty.")
 
-    logger.info(f"Starting web scraping for URL: {url.url}")
-    content = WebScraper(url.url).scrape()
-    if not content:
-        logger.warning(f"No content found to scrape from URL: {url.url}")
-        raise HTTPException(status_code=404, detail=f"No content found to scrape from URL: {url.url}")
+    try:
+        logger.info(f"Starting web scraping for URL: {url.url}")
+        content = WebScraper(url.url).scrape()
+        if not content:
+            logger.warning(f"No content found to scrape from URL: {url.url}")
+            raise HTTPException(status_code=404, detail=f"No content found to scrape from URL: {url.url}")
 
-    file_name = f"{url.url.strip()}-scr.txt"
+        file_name = f"{url.url.strip()}-scr.txt"
 
-    file_id = await file_services.process_content_upload(
-        session_id=session_id,
-        content=content.strip(),
-        file_name=file_name,
-    )
+        file_id = await file_services.process_content_upload(
+            session_id=session_id,
+            content=content.strip(),
+            file_name=file_name,
+        )
 
-    return {
-        "message": "Content scraped and processed successfully.",
-        "file_id": file_id,
-        "session_id": session_id,
-        "file_name": file_name,
-        "preview": f"{content[:200]}..."
-    }
+        logger.info(f"Content scraped and processed successfully: file_id={file_id}, session_id={session_id}")
+        return {
+            "message": "Content scraped and processed successfully.",
+            "file_id": file_id,
+            "session_id": session_id,
+            "file_name": file_name,
+            "preview": f"{content[:200]}..."
+        }
+    except Exception as e:
+        logger.error(f"Failed to scrape URL: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to scrape URL.")

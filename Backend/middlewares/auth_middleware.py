@@ -48,13 +48,21 @@ class AuthMiddleware(BaseHTTPMiddleware):
         Returns:
             Response: The HTTP response.
         """
+        logger.info(f"Dispatching request to {request.url.path}")
+        if request.method == "OPTIONS":
+            logger.info("Handling CORS preflight request")
+            return await call_next(request)
         if request.url.path in self.exempt_paths:
+            logger.info(f"Request to {request.url.path} is exempt from authentication")
             return await call_next(request)
         if await self._handle_clerk_auth(request):
+            logger.info("Clerk authentication successful")
             return await call_next(request)
         if await self._handle_token_auth(request):
+            logger.info("Token authentication successful")
             return await call_next(request)
 
+        logger.warning("Authentication failed: Invalid Session or Token")
         return JSONResponse(status_code=401, content={"error": "Invalid Session or Token"})
 
     def _get_token_from_request(self, request: Request):
@@ -67,8 +75,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
         Returns:
             str: The extracted token, or None if not present.
         """
+        logger.debug("Extracting token from Authorization header")
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
+            logger.warning("Authorization header missing or invalid")
             return None
         return auth_header.split(" ")[1]
 
@@ -82,15 +92,20 @@ class AuthMiddleware(BaseHTTPMiddleware):
         Returns:
             bool: True if authentication is successful, False otherwise.
         """
+        logger.debug("Handling Clerk authentication")
         user_id, session_id = self._verify_clerk_token(request), request.headers.get('Session-ID')
         if user_id:
+            logger.info(f"Clerk authentication successful for user_id: {user_id}")
             request.state.auth_method = "clerk"
             request.state.user_id = user_id
             if session_id and await self._owns_session(session_id, user_id, request.app.state.db):
+                logger.info(f"Session ownership verified for session_id: {session_id}")
                 request.state.session_id = session_id
             else:
+                logger.warning("Session ownership verification failed")
                 request.state.session_id = None
             return True
+        logger.warning("Clerk authentication failed")
         return False
 
     async def _handle_token_auth(self, request: Request):
@@ -103,15 +118,19 @@ class AuthMiddleware(BaseHTTPMiddleware):
         Returns:
             bool: True if authentication is successful, False otherwise.
         """
+        logger.debug("Handling token authentication")
         token = self._get_token_from_request(request)
         if not token:
+            logger.warning("Token missing in request")
             return False
         session_id, user_id = self._verify_jwt(token)
         if session_id and user_id and await self._owns_session(session_id, user_id, request.app.state.db):
+            logger.info(f"Token authentication successful for user_id: {user_id}, session_id: {session_id}")
             request.state.auth_method = "token"
             request.state.session_id = session_id
             request.state.user_id = user_id
             return True
+        logger.warning("Token authentication failed")
         return False
 
     def _verify_clerk_token(self, request: Request):
@@ -124,6 +143,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         Returns:
             str: The user ID if verification is successful, None otherwise.
         """
+        logger.debug("Verifying Clerk token")
         try:
             request_state = self.clerk.authenticate_request(
                 request,
@@ -131,10 +151,13 @@ class AuthMiddleware(BaseHTTPMiddleware):
             )
 
             if request_state.is_signed_in:
+                logger.info("Clerk token verification successful")
                 return request_state.payload.get("sub") or request_state.payload.get("user_id")
+            logger.warning("Clerk token verification failed: User not signed in")
             return None
 
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error during Clerk token verification: {e}")
             return None
 
     def _verify_jwt(self, token: str):
@@ -147,12 +170,15 @@ class AuthMiddleware(BaseHTTPMiddleware):
         Returns:
             tuple: The session ID and user ID if verification is successful, (None, None) otherwise.
         """
+        logger.debug("Verifying JWT token")
         try:
             payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+            logger.info("JWT token verification successful")
             return payload.get('session_id'), payload.get('user_id')
-        except JWTError:
+        except JWTError as e:
+            logger.error(f"JWT token verification failed: {e}")
             return None, None
-    
+
     async def _owns_session(self, session_id: str, user_id: str, db=None):
         """
         Checks if the session belongs to the user.
@@ -165,5 +191,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
         Returns:
             str: The session ID if ownership is verified, None otherwise.
         """
+        logger.debug(f"Verifying session ownership for session_id: {session_id}, user_id: {user_id}")
         session = await db['Sessions'].find_one({"user_id": user_id, "_id": ObjectId(session_id)})
-        return session_id if session else None
+        if session:
+            logger.info("Session ownership verified")
+            return session_id
+        logger.warning("Session ownership verification failed")
+        return None

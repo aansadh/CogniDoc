@@ -1,3 +1,10 @@
+"""
+This module provides the FileRepository class for handling database operations related to file metadata.
+
+The FileRepository class includes methods for adding, deleting, and retrieving file records from the database.
+It interacts with the database collection named "Files" and ensures proper error handling for database operations.
+"""
+
 from models.db_models import FileModel
 from bson.objectid import ObjectId
 from typing import Optional, List
@@ -35,16 +42,21 @@ class FileRepository:
         Raises:
             DatabaseOperationError: If the operation fails.
         """
+        logger.debug("Adding file metadata to the database")
         try:
             result = await self.collection.insert_one(file_doc.model_dump(exclude_unset=True, by_alias=True))
 
             if not result or not result.acknowledged or not result.inserted_id:
+                logger.error("Failed to insert file metadata into the database")
                 raise DatabaseOperationError("Failed to insert file metadata into the database.")
-            
+
+            logger.info(f"File metadata added successfully with ID: {result.inserted_id}")
             return str(result.inserted_id)
-        except DatabaseOperationError:
+        except DatabaseOperationError as e:
+            logger.error(f"Database operation error: {str(e)}")
             raise
         except Exception as e:
+            logger.error(f"An error occurred while adding file metadata: {str(e)}")
             raise DatabaseOperationError(f"An error occurred while adding file metadata: {str(e)}")
 
 
@@ -63,6 +75,7 @@ class FileRepository:
             ResourceNotFoundError: If no matching file is found.
             DatabaseOperationError: If the operation fails.
         """
+        logger.debug(f"Deleting file metadata for session_id: {session_id}, file_id: {file_id}")
         try:
             query = {"session_id": session_id}
             if file_id:
@@ -71,14 +84,17 @@ class FileRepository:
             else:
                 result = await self.collection.delete_many(query)
 
-            if result.deleted_count == 0:
+            if file_id and result.deleted_count == 0:
+                logger.warning(f"No files found for session_id: {session_id} and file_id: {file_id}")
                 raise ResourceNotFoundError(resource_type='File', resource_id=file_id or session_id)
 
+            logger.info(f"Deleted {result.deleted_count} file(s) for session_id: {session_id}, file_id: {file_id}")
             return result.deleted_count
-        except ResourceNotFoundError:
-            logger.warning(f"No files found for session_id: {session_id} and file_id: {file_id}")
+        except ResourceNotFoundError as e:
+            logger.warning(f"Resource not found: {str(e)}")
             raise
         except Exception as e:
+            logger.error(f"An error occurred while deleting file metadata: {str(e)}")
             raise DatabaseOperationError(f"An error occurred while deleting file metadata: {str(e)}")
 
 
@@ -93,9 +109,9 @@ class FileRepository:
             list: A list of file metadata records.
 
         Raises:
-            ResourceNotFoundError: If no files are found for the given session ID.
             DatabaseOperationError: If the operation fails.
         """
+        logger.debug(f"Retrieving files for session_id: {session_id}")
         try:
             files = await self.collection.find({"session_id": session_id}).to_list(length=None)
 
@@ -104,7 +120,8 @@ class FileRepository:
                     file["file_id"] = str(file["_id"])
                     del file["_id"]
 
+            logger.info(f"Retrieved {len(files)} file(s) for session_id: {session_id}")
             return files
-        
         except Exception as e:
+            logger.error(f"An error occurred while retrieving file metadata: {str(e)}")
             raise DatabaseOperationError(f"An error occurred while retrieving file metadata: {str(e)}")
