@@ -3,6 +3,7 @@ pydantic
 pydantic-settings
 python-dotenv
 uvicorn
+fastapi-cors
 # langchain dependencies
 sentence-transformers
 aiofiles

@@ -4,12 +4,19 @@ from langchain_community.document_loaders import PyMuPDFLoader
 import os, httpx, requests
 from rag.exceptions import ContextNotFoundError, QueryProcessingError, EnvironmentError
 from typing import List, Iterable
+import logging
+
+logger = logging.getLogger(__name__)
 
 def load_documents(file_path: str):
+    logger.debug(f"Loading documents from file: {file_path}")
     if not os.path.exists(file_path):
+        logger.error(f"File not found: {file_path}")
         raise FileNotFoundError(f"The file {file_path} doesn't exist.")
     loader = PyMuPDFLoader(file_path)
-    return loader.load()
+    documents = loader.load()
+    logger.info(f"Loaded {len(documents)} documents from file: {file_path}")
+    return documents
 
 def split_docs(documents: List[Iterable], metadata: dict = None):
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
@@ -25,10 +32,12 @@ def split_docs(documents: List[Iterable], metadata: dict = None):
     return chunks
 
 def get_relevant_chunks(vectorstore: Chroma, query: str, filter=None, relevance_threshold=0.3, k=5):
+    logger.debug(f"Fetching relevant chunks for query: {query}")
     relevant_chunks = vectorstore.similarity_search_with_relevance_scores(query, k=k, filter=filter)
     if(len(relevant_chunks) == 0 or relevant_chunks[0][1] < relevance_threshold):
+        logger.warning("No relevant documents found for the query!")
         raise ContextNotFoundError("No relevant documents found for the query!")
-    
+    logger.info(f"Found {len(relevant_chunks)} relevant chunks for query: {query}")
     return relevant_chunks 
 
 def get_context(vectorstore: Chroma, query: str, filter=None):
@@ -48,11 +57,14 @@ def get_context(vectorstore: Chroma, query: str, filter=None):
 
 
 def ask_query(context: str, query: str, url: str = None):
+    logger.debug(f"Preparing to ask query: {query}")
     API_URL = url or os.getenv("HUGGINGFACE_INFERENCE_API_URL")
     if not API_URL:
+        logger.error("API URL is missing. Set the API_URL environment variable.")
         raise EnvironmentError("API URL is missing. Set the API_URL environment variable.")
     API_KEY = os.getenv("HUGGINGFACE_API_KEY")
     if not API_KEY:
+        logger.error("Hugging Face API key is missing. Set HUGGINGFACE_API_KEY environment variable.")
         raise EnvironmentError("Hugging Face API key is missing. Set HUGGINGFACE_API_KEY environment variable.")
 
     headers = { "Authorization": f"Bearer {API_KEY}" }
@@ -68,37 +80,26 @@ def ask_query(context: str, query: str, url: str = None):
             """
     payload = {
         "messages": [
-            # {"role": "system", "content": ""}, 
             { "role": "user", "content": prompt.strip() } 
         ],
         "model": "microsoft/phi-4"
     }
     try:
+        logger.info("Sending query to Hugging Face API.")
         response = requests.post(API_URL, headers=headers, json=payload)
+        response.raise_for_status()
         result = response.json()
+        logger.info("Query processed successfully.")
         return result['choices'][0]['message']
     except requests.HTTPError as e:
+        logger.error(f"Model API error: {e.response.status_code} - {e.response.text}", exc_info=True)
         raise QueryProcessingError(f"Model API error: {e.response.status_code} - {e.response.text}")
     except requests.RequestException as e:
+        logger.error(f"Request to model API failed: {str(e)}", exc_info=True)
         raise QueryProcessingError(f"Request to model API failed: {str(e)}")
     except Exception as e:
+        logger.error(f"Unexpected error during query: {str(e)}", exc_info=True)
         raise QueryProcessingError(f"Unexpected error during query: {str(e)}")
-    
-    # try:
-    #     async with httpx.AsyncClient() as client:
-    #         response = await client.post(API_URL, headers=headers, json=payload)
-    #         response.raise_for_status()
-    #         result = response.json()
-    #         return result["choices"][0]["message"]
-
-    # except httpx.HTTPStatusError as e:
-    #     raise QueryProcessingError(f"Model API error: {e.response.status_code} - {e.response.text}")
-
-    # except httpx.RequestError as e:
-    #     raise QueryProcessingError(f"Request to model API failed: {str(e)}")
-
-    # except Exception as e:
-    #     raise QueryProcessingError(f"Unexpected error during query: {str(e)}")
 
 
 def process_query(query: str, vectorstore: Chroma, filter: dict=None):

@@ -1,3 +1,10 @@
+"""
+This module provides the SessionRepository class for handling database operations related to user sessions.
+
+The SessionRepository class includes methods for adding, deleting, and retrieving session records from the database.
+It interacts with the database collection named "Sessions" and ensures proper error handling for database operations.
+"""
+
 from exceptions import ResourceNotFoundError, DatabaseOperationError
 from bson.objectid import ObjectId
 from models.db_models import SessionModel
@@ -85,3 +92,29 @@ class SessionRepository:
             return sessions
         except Exception as e:
             raise DatabaseOperationError(f"Error retrieving sessions: {str(e)}")
+        
+    async def get_session_by_id(self, session_id: str) -> SessionModel:
+        """
+        Retrieves a session by its ID.
+
+        Args:
+            session_id (str): The ID of the session to retrieve.
+
+        Returns:
+            SessionModel: The session document.
+
+        Raises:
+            ResourceNotFoundError: If the session is not found.
+            DatabaseOperationError: If the operation fails.
+        """
+        try:
+            session = await self.collection.find_one({"_id": ObjectId(session_id)})
+            if not session:
+                raise ResourceNotFoundError(resource_type='Session', resource_id=session_id)
+
+            if '_id' in session and isinstance(session['_id'], ObjectId):
+                session["_id"] = str(session["_id"])
+
+            return SessionModel.model_validate(session, by_alias=True)
+        except Exception as e:
+            raise DatabaseOperationError(f"Error retrieving session: {str(e)}")

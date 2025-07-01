@@ -43,6 +43,7 @@ class SessionModel(BaseModel):
 
     Attributes:
         session_id (Optional[str]): Unique identifier for the session, used as the primary key.
+        session_name (Optional[str]): Name of the session, can be used for identification.
         user_id (str): Identifier for the user associated with the session.
         created_at (datetime): Timestamp indicating when the session was created.
 
@@ -51,6 +52,7 @@ class SessionModel(BaseModel):
         - Encodes ObjectId fields as strings for JSON serialization.
     """
     session_id: Optional[str] = Field(default=None, description="Unique session identifier", alias="_id")
+    session_name: Optional[str] = Field(default=None, description="Name of the session")
     user_id: str = Field(..., description="ID of the user associated with the session")
     created_at: datetime = Field(default_factory= lambda: datetime.now(timezone.utc), description="Timestamp of session creation")
 
