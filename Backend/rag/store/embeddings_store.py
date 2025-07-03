@@ -14,5 +14,8 @@ def get_embedding_model(provider: str, model_name: str = None):
     elif provider == "instructor":
         return HuggingFaceInstructEmbeddings(model_name=model_name or "hkunlp/instructor-large")
     
+    elif provider == 'ollama':
+        pass
+
     else:
         raise ValueError(f"Unsupported embedding provider: {provider}")

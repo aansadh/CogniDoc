@@ -90,3 +90,5 @@ class VectorstoreRepository:
             await run_in_threadpool(chroma_collection.delete, where=filter_criteria)
         except Exception as e:
             raise VectorstoreError(f"Error deleting documents from vectorstore: {str(e)}")
+        
+    

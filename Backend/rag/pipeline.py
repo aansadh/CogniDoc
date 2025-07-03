@@ -19,28 +19,31 @@ def load_documents(file_path: str):
     return documents
 
 def split_docs(documents: List[Iterable], metadata: dict = None):
+    logger.debug("Splitting documents into chunks.")
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
     chunks = []
     for doc in documents:
+        logger.debug(f"Splitting document with metadata: {doc.metadata}")
         doc_chunks = splitter.split_documents([doc])
         for chunk in doc_chunks:
-            chunk.metadata.update(doc.metadata) 
+            chunk.metadata.update(doc.metadata)
             if metadata:
-                chunk.metadata.update(metadata) 
+                chunk.metadata.update(metadata)
             chunks.append(chunk)
-
+    logger.info(f"Generated {len(chunks)} chunks from documents.")
     return chunks
 
 def get_relevant_chunks(vectorstore: Chroma, query: str, filter=None, relevance_threshold=0.3, k=5):
     logger.debug(f"Fetching relevant chunks for query: {query}")
     relevant_chunks = vectorstore.similarity_search_with_relevance_scores(query, k=k, filter=filter)
-    if(len(relevant_chunks) == 0 or relevant_chunks[0][1] < relevance_threshold):
+    if len(relevant_chunks) == 0 or relevant_chunks[0][1] < relevance_threshold:
         logger.warning("No relevant documents found for the query!")
         raise ContextNotFoundError("No relevant documents found for the query!")
     logger.info(f"Found {len(relevant_chunks)} relevant chunks for query: {query}")
-    return relevant_chunks 
+    return relevant_chunks
 
 def get_context(vectorstore: Chroma, query: str, filter=None):
+    logger.debug(f"Getting context for query: {query}")
     relevant_chunks = get_relevant_chunks(vectorstore, query, filter)
     context = ""
     sources = []
@@ -49,12 +52,11 @@ def get_context(vectorstore: Chroma, query: str, filter=None):
         source = doc.metadata.get("file_name", "Unknown")
         sources.append(f"{source} (page {page})")
         context += f"{doc.page_content}\n\n"
-
+    logger.info(f"Context assembled with {len(sources)} sources.")
     return {
         "context": context.strip(),
         "sources": sources
     }
-
 
 def ask_query(context: str, query: str, url: str = None):
     logger.debug(f"Preparing to ask query: {query}")
@@ -67,7 +69,7 @@ def ask_query(context: str, query: str, url: str = None):
         logger.error("Hugging Face API key is missing. Set HUGGINGFACE_API_KEY environment variable.")
         raise EnvironmentError("Hugging Face API key is missing. Set HUGGINGFACE_API_KEY environment variable.")
 
-    headers = { "Authorization": f"Bearer {API_KEY}" }
+    headers = {"Authorization": f"Bearer {API_KEY}"}
     prompt = f"""
                 You are an intelligent assistant. Your task is to answer the user's question based ONLY on the provided context.
                 If the answer is not found in the context, clearly state that you don't have enough information.
@@ -80,7 +82,7 @@ def ask_query(context: str, query: str, url: str = None):
             """
     payload = {
         "messages": [
-            { "role": "user", "content": prompt.strip() } 
+            {"role": "user", "content": prompt.strip()}
         ],
         "model": "microsoft/phi-4"
     }
@@ -101,11 +103,11 @@ def ask_query(context: str, query: str, url: str = None):
         logger.error(f"Unexpected error during query: {str(e)}", exc_info=True)
         raise QueryProcessingError(f"Unexpected error during query: {str(e)}")
 
-
 def process_query(query: str, vectorstore: Chroma, filter: dict=None):
+    logger.debug(f"Processing query: {query}")
     context = get_context(vectorstore, query, filter=filter)
     results = ask_query(context['context'], query)
-
+    logger.info("Query processed and response generated.")
     return {
         "response": results['content'],
         "sources": list(set(context["sources"])),
