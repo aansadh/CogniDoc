@@ -10,6 +10,7 @@ from exceptions import SessionServiceError
 from rag.vectorstore_repository import VectorstoreRepository
 from repositories.file_repository import FileRepository
 import logging
+from rag.services.rag_services import RagServices
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ class SessionServices:
     Provides services for managing user sessions, including creation and deletion.
     """
 
-    def __init__(self, vectorstore: Chroma, db):
+    def __init__(self, db, rag_services: RagServices):
         """
         Initializes the SessionServices instance.
 
@@ -26,11 +27,10 @@ class SessionServices:
             vectorstore (Chroma): The vectorstore instance for document storage.
             db: The database connection instance.
         """
-        self.vectorstore = vectorstore
         self.db = db
         self.session_repository = SessionRepository(self.db)
-        self.vectorstore_repository = VectorstoreRepository(self.vectorstore)
         self.file_repository = FileRepository(self.db)
+        self.rag_services = rag_services
 
     async def create_session(self, user_id: str, session_name: str) -> str:
         """
@@ -71,7 +71,7 @@ class SessionServices:
         """
         logger.debug(f"Deleting session: session_id={session_id}")
         try:
-            await self.vectorstore_repository.delete_doc_async({"session_id": session_id})
+            await self.rag_services.delete_doc_async({"session_id": session_id})
             logger.info(f"Vectorstore entries deleted for session_id={session_id}")
 
             await self.file_repository.delete_file_metadata(session_id=session_id)

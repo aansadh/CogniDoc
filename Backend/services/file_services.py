@@ -4,11 +4,11 @@ Service layer for handling file-related operations in the Smart PDF QA API appli
 
 from langchain_chroma import Chroma
 from repositories.file_repository import FileRepository
-from rag.vectorstore_repository import VectorstoreRepository
 from repositories.file_storage_repository import FileStorageRepository
 from models.db_models import FileModel, VectorstoreModel
 from exceptions import FileServiceError, ResourceNotFoundError
 import logging
+from rag.services.rag_services import RagServices
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ class FileServices:
     Provides services for file and content operations, including upload, deletion, and vectorstore interactions.
     """
 
-    def __init__(self, vectorstore: Chroma, db):
+    def __init__(self, db, rag_services: RagServices):
         """
         Initializes the FileServices instance.
 
@@ -25,10 +25,9 @@ class FileServices:
             vectorstore (Chroma): The vectorstore instance for document storage.
             db: The database connection instance.
         """
-        self.vectorstore = vectorstore
         self.db = db
         self.file_repository = FileRepository(self.db)
-        self.vectorstore_repository = VectorstoreRepository(self.vectorstore)
+        self.rag_services = rag_services
 
     async def process_file_upload(
         self,
@@ -55,7 +54,7 @@ class FileServices:
                 file_name=file_name,
                 session_id=session_id,
             )
-            await self.vectorstore_repository.add_pdf_async(
+            await self.rag_services.add_pdf_async(
                 file_path, file_metadata.model_dump(exclude_unset=True)
             )
 
@@ -91,7 +90,7 @@ class FileServices:
                 file_name=file_name,
                 session_id=session_id,
             )
-            await self.vectorstore_repository.add_content_async(
+            await self.rag_services.add_content_async(
                 content.strip(), file_metadata.model_dump(exclude_unset=True)
             )
 
@@ -110,7 +109,7 @@ class FileServices:
         logger.debug(f"Processing file deletion: session_id={session_id}, file_id={file_id}")
         try:
             filter_criteria = {"$and": [{"file_id": file_id}, {"session_id": session_id}]}
-            await self.vectorstore_repository.delete_doc_async(
+            await self.rag_services.delete_doc_async(
                 filter_criteria=filter_criteria
             )
             logger.info(f"Vectorstore entry deleted: file_id={file_id}")

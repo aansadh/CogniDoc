@@ -1,4 +1,12 @@
-class VectorstoreError(Exception):
+class RagError(Exception):
+    """Base class for all RAG-related errors."""
+    pass
+
+class EnvironmentError(RagError):
+    """Raised when a required environment variable or config is missing."""
+    pass
+
+class VectorstoreError(RagError):
     """Base class for vectorstore-related errors."""
     pass
 
@@ -18,6 +26,6 @@ class QueryProcessingError(Exception):
     """Raised when query processing fails."""
     pass
 
-class EnvironmentError(Exception):
-    """Raised when a required environment variable or config is missing."""
+class LLMGenerationError(Exception):
+    """Raised when LLM generation fails."""
     pass

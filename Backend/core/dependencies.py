@@ -1,18 +1,20 @@
 """
 Dependency injection utilities for the Smart PDF QA API application.
 """
+
 from fastapi import Request, FastAPI, HTTPException, Header, Depends
 from fastapi.security import HTTPBearer
 from typing import Optional
 from langchain_chroma import Chroma
 import os
-from rag.embeddings.embeddings_store import get_embedding_model
+from rag.store.embeddings_store import get_embedding_model
 from utils.logger import log_duration
 from pymongo import AsyncMongoClient
 from core.config import settings
 import logging
 from services.file_services import FileServices
 from services.session_services import SessionServices
+from rag.services.rag_services import RagServices
 
 logger = logging.getLogger(__name__)
 
@@ -25,12 +27,13 @@ def init_vectorstore_sync(app: FastAPI):
     Args:
         app (FastAPI): The FastAPI application instance.
     """
-    os.makedirs("chroma_db", exist_ok=True)
+    logger.debug("Initializing vectorstore synchronously.")
+    os.makedirs("rag/chroma_db", exist_ok=True)
     embedding_model = get_embedding_model(
         settings.embedding_provider,
         settings.embedding_model
     )
-    app.state.vectorstore = Chroma(persist_directory="chroma_db", embedding_function=embedding_model)
+    app.state.vectorstore = Chroma(persist_directory="rag/chroma_db", embedding_function=embedding_model)
     logger.info("Vectorstore initialized successfully.")
 
 @log_duration
@@ -41,6 +44,7 @@ async def init_mongodb_async(app: FastAPI):
     Args:
         app (FastAPI): The FastAPI application instance.
     """
+    logger.debug("Initializing MongoDB connection asynchronously.")
     mongo_uri = settings.mongodb_uri
     mongodb_db = settings.mongodb_db
     app.state.mongo_client = AsyncMongoClient(mongo_uri)
@@ -60,7 +64,9 @@ def get_db(request: Request):
     Raises:
         RuntimeError: If the database connection is not initialized.
     """
+    logger.debug("Retrieving database connection from application state.")
     if not hasattr(request.app.state, 'db') or request.app.state.db is None:
+        logger.error("Database connection is not initialized.")
         raise RuntimeError("Database connection is not initialized.")
     return request.app.state.db
 
@@ -77,7 +83,9 @@ def get_vectorstore(request: Request) -> Chroma:
     Raises:
         RuntimeError: If the vectorstore is not initialized.
     """
+    logger.debug("Retrieving vectorstore instance from application state.")
     if not hasattr(request.app.state, 'vectorstore') or request.app.state.vectorstore is None:
+        logger.error("Vectorstore is not initialized.")
         raise RuntimeError("Vectorstore is not initialized. Set it using set_vectorstore() before accessing.")
     return request.app.state.vectorstore
 
@@ -94,7 +102,9 @@ async def validate_session(request: Request) -> str:
     Raises:
         HTTPException: If the session ID is not valid.
     """
+    logger.debug("Validating session ID in request state.")
     if not request.state.session_id:
+        logger.error("Valid Session ID is required.")
         raise HTTPException(status_code=401, detail="Valid Session ID is required")
     return request.state.session_id
 
@@ -125,38 +135,64 @@ async def get_user_id(request: Request) -> str:
     Raises:
         HTTPException: If the user ID is not set.
     """
+    logger.debug("Retrieving user ID from request state.")
     if not hasattr(request.state, 'user_id') or request.state.user_id is None:
+        logger.error("User ID is not set in the request state.")
         raise HTTPException(status_code=401, detail="User ID is not set in the request state.")
     return request.state.user_id
 
-async def get_file_services(request: Request, db=Depends(get_db), vectorstore: Chroma=Depends(get_vectorstore)) -> FileServices:
+async def get_rag_services(
+        request: Request, 
+        vectorstore: Chroma = Depends(get_vectorstore)
+):
     """
-    Retrieves the FileServices instance from the request state.
+    Retrieves the RagServices instance from the request state or initializes it if not present.
+
+    Args:
+        request (Request): The incoming HTTP request.
+        vectorstore (Chroma): The vectorstore instance.
+
+    Returns:
+        RagServices: The RagServices instance.
+    """
+    logger.debug("Retrieving or initializing RagServices instance.")
+    if not hasattr(request.state, 'rag_services') or request.state.rag_services is None:
+        request.state.rag_services = RagServices(vectorstore=vectorstore, provider=settings.llm_provider, model=settings.llm)
+        logger.info(f"RagServices instance initialized. llm_provider: {settings.llm_provider}, llm: {settings.llm}")
+    return request.state.rag_services
+
+async def get_file_services(request: Request, db=Depends(get_db), rag_services: RagServices=Depends(get_rag_services)) -> FileServices:
+    """
+    Retrieves the FileServices instance from the request state or initializes it if not present.
 
     Args:
         request (Request): The incoming HTTP request.
         db: The database connection instance.
-        vectorstore (Chroma): The vectorstore instance.
+        rag_services (RagServices): The RagServices instance.
 
     Returns:
         FileServices: The FileServices instance.
     """
+    logger.debug("Retrieving or initializing FileServices instance.")
     if not hasattr(request.state, 'file_services') or request.state.file_services is None:
-        request.state.file_services = FileServices(vectorstore=vectorstore, db=db)
+        request.state.file_services = FileServices(db=db, rag_services=rag_services)
+        logger.info("FileServices instance initialized.")
     return request.state.file_services
 
-async def get_session_services(request: Request, db=Depends(get_db), vectorstore: Chroma=Depends(get_vectorstore)) -> SessionServices:
+async def get_session_services(request: Request, db=Depends(get_db), rag_services: RagServices=Depends(get_rag_services)) -> SessionServices:
     """
-    Retrieves the SessionServices instance from the request state.
+    Retrieves the SessionServices instance from the request state or initializes it if not present.
 
     Args:
         request (Request): The incoming HTTP request.
         db: The database connection instance.
-        vectorstore (Chroma): The vectorstore instance.
+        rag_services (RagServices): The RagServices instance.
 
     Returns:
         SessionServices: The SessionServices instance.
     """
+    logger.debug("Retrieving or initializing SessionServices instance.")
     if not hasattr(request.state, 'session_services') or request.state.session_services is None:
-        request.state.session_services = SessionServices(vectorstore=vectorstore, db=db)
+        request.state.session_services = SessionServices(db=db, rag_services=rag_services)
+        logger.info("SessionServices instance initialized.")
     return request.state.session_services

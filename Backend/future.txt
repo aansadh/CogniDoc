@@ -3,3 +3,5 @@ the performance can be improved.
 
 1. Index { session_id and user_id } in Sessions collection for fast lookups.
 
+Include dynamic k value (context chunks) based on question. (eg.main theme)
+

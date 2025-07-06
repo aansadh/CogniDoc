@@ -3,13 +3,13 @@ Routes for handling query-related operations in the Smart PDF QA API application
 """
 
 from fastapi import HTTPException, APIRouter, Depends
-from rag.pipeline import process_query
 from models.models import QueryModel
-from core.dependencies import get_vectorstore, validate_session
+from core.dependencies import get_rag_services, validate_session
 from utils.logger import log_duration
 from fastapi.concurrency import run_in_threadpool
 from rag.exceptions import ContextNotFoundError
 import logging
+from rag.services.rag_services import RagServices
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -19,12 +19,16 @@ logger = logging.getLogger(__name__)
 async def ask_query_endpoint(
     query: QueryModel,
     session_id: str=Depends(validate_session),
-    vectorstore=Depends(get_vectorstore)
+    rag_services: RagServices=Depends(get_rag_services)
 ):  
     logger.debug(f"Processing query: session_id={session_id}, query={query.query}")
     try:
         filter = {"session_id": session_id}
-        response = await run_in_threadpool(process_query, query.query, filter=filter, vectorstore=vectorstore)
+        response = await rag_services.process_query(
+            query=query.query,
+            filter=filter,
+            k=5
+        )
         logger.info(f"Query processed successfully: session_id={session_id}")
         return response
     except ContextNotFoundError as e:

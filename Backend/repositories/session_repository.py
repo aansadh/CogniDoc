@@ -63,6 +63,7 @@ class SessionRepository:
             result = await self.collection.delete_one({"_id": ObjectId(session_id)})
             if result.deleted_count == 0:
                 raise ResourceNotFoundError(resource_type='Session', resource_id=session_id)
+            return result.deleted_count
         except Exception as e:
             raise DatabaseOperationError(f"Error deleting session: {str(e)}")
         

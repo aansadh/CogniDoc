@@ -67,7 +67,7 @@ origins = [
     "http://localhost",
     "http://localhost:3000",  # Your frontend's development server
     "http://localhost:5173",  # Common for Vite/React dev server
-    "http://127.0.0.1:8000",  # If your backend runs on this address
+    "http://127.0.0.1:8080",  # If your backend runs on this address
     "http://127.0.0.1:5173",  # Another common Vite/React dev server address
     # Add the URL of your deployed frontend here!
     "https://preview--query-smart-docs-ui.lovable.app", # <--- IMPORTANT: Replace with your actual deployed frontend URL

@@ -36,8 +36,10 @@ class Settings(BaseSettings):
     uploads_folder: str = "data" 
 
     openai_api_key: Optional[str] = None 
-    embedding_provider: str = "huggingface"
-    embedding_model: str = "intfloat/e5-small-v2"
+    embedding_provider: str = "ollama"
+    embedding_model: str = "nomic-embed-text"
+    llm_provider: str = "ollama"
+    llm: str = "phi3:mini" 
     huggingface_api_key: Optional[str] = None 
     hf_inference_api_url: Optional[str] = None 
 
